@@ -1,0 +1,153 @@
+:root {
+  --bg: #ffffff;
+  --text: #000000;
+  --card: #ffffff;
+  --border: #ddd;
+  --table-header: #f2f2f2;
+  --progress-bg: #eee;
+  --progress-fill: #4caf50;
+  --input-bg: #ffffff;
+  --input-border: #ccc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #555555;
+    --text: #f0f0f0;
+    --card: #3b3b3b;
+    --border: #333;
+    --table-header: #2c2c2c;
+    --progress-bg: #333;
+    --progress-fill: #00ffd5;
+    --input-bg: #666565;
+    --input-border: #555;
+  }
+}
+
+body {
+  font-family: sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding: 20px;
+}
+
+.container {
+  max-width: 1000px;
+  margin: auto;
+  background: var(--card);
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+  text-align: center;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th, td {
+  border: 1px solid var(--border);
+  padding: 8px;
+  text-align: center;
+}
+
+th {
+  background-color: var(--table-header);
+}
+
+.progress-bar {
+  background: var(--progress-bg);
+  width: 100%;
+  height: 20px;
+  border-radius: 5px;
+  margin: 10px 0;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--progress-fill);
+  width: 0%;
+  transition: width 0.3s;
+}
+
+input[type="number"] {
+  width: 80px;
+  padding: 4px;
+  border-radius: 5px;
+  background-color: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--input-border);
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 10px;
+  }
+
+  .container {
+    padding: 20px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  table, thead, tbody, th, td, tr {
+    display: block;
+    width: 100%;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tr {
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+
+  td {
+    text-align: left;
+    position: relative;
+    padding-left: 50%;
+    margin-bottom: 10px;
+  }
+
+  td::before {
+    position: absolute;
+    top: 0;
+    left: 10px;
+    width: 45%;
+    white-space: nowrap;
+    font-weight: bold;
+  }
+
+  /* Rótulos manuais para mobile */
+  td:nth-child(1)::before { content: "Mês"; }
+  td:nth-child(2)::before { content: "Daniel (€)"; }
+  td:nth-child(3)::before { content: "Camila (€)"; }
+  td:nth-child(4)::before { content: "Total Mês (€)"; }
+  td:nth-child(5)::before { content: "Total Acumulado (€)"; }
+  td:nth-child(6)::before { content: "Estado"; }
+
+  input[type="number"] {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 5px;
+  }
+
+  .summary p {
+    font-size: 0.95rem;
+  }
+
+  .progress-bar {
+    height: 16px;
+  }
+}

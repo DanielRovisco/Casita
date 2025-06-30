@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Poupança para Casa</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Casita</h1>
+
+    <div class="summary">
+      <p><strong>Total acumulado:</strong> €<span id="totalAcumulado">0.00</span></p>
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+      <p><strong>Progresso:</strong> <span id="progresso">0%</span></p>
+      <p><strong>Depósito mínimo mensal necessário:</strong> €<span id="minDeposito">0.00</span></p>
+      <p><strong>Previsão final:</strong> €<span id="previsaoFinal">0.00</span></p>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Mês</th>
+          <th>Daniel (€)</th>
+          <th>Camila (€)</th>
+          <th>Total Mês (€)</th>
+          <th>Total Acumulado (€)</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="tabela"></tbody>
+    </table>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
