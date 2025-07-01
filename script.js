@@ -51,15 +51,20 @@ function renderTable() {
                    totalMes < MONTHLY_GOAL ? "Atrasado" :
                    totalMes === MONTHLY_GOAL ? "No ponto" : "Adiantado";
 
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${monthLabels[i]}</td>
-      <td><input type="number" value="${dep.daniel}" onchange="updateValue(${i}, 'daniel', this.value)"/></td>
-      <td><input type="number" value="${dep.camila}" onchange="updateValue(${i}, 'camila', this.value)"/></td>
-      <td>€${totalMes.toFixed(2)}</td>
-      <td>€${acumulado.toFixed(2)}</td>
-      <td>${estado}</td>
-    `;
+   const row = document.createElement("tr");
+row.innerHTML = `
+  <td data-label="Mês">${monthLabels[i]}</td>
+  <td data-label="Daniel (€)">
+    <input type="number" value="${dep.daniel}" onchange="updateValue(${i}, 'daniel', this.value)"/>
+  </td>
+  <td data-label="Camila (€)">
+    <input type="number" value="${dep.camila}" onchange="updateValue(${i}, 'camila', this.value)"/>
+  </td>
+  <td data-label="Total Mês (€)">€${totalMes.toFixed(2)}</td>
+  <td data-label="Total Acumulado (€)">€${acumulado.toFixed(2)}</td>
+  <td data-label="Estado">${estado}</td>
+`;
+
     tabela.appendChild(row);
   });
 

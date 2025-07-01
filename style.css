@@ -76,26 +76,30 @@ th {
   transition: width 0.3s;
 }
 
-input[type="number"] {
-  width: 80px;
-  padding: 4px;
-  border-radius: 5px;
-  background-color: var(--input-bg);
-  color: var(--text);
-  border: 1px solid var(--input-border);
-}
-
 @media (max-width: 600px) {
   body {
     padding: 10px;
+    font-size: 0.95rem;
   }
 
   .container {
     padding: 20px;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   h1 {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
+    text-align: center;
+  }
+
+  .summary p {
+    font-size: 0.95rem;
+    margin: 8px 0;
+  }
+
+  .progress-bar {
+    height: 16px;
   }
 
   table, thead, tbody, th, td, tr {
@@ -108,46 +112,50 @@ input[type="number"] {
   }
 
   tr {
-    margin-bottom: 20px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 10px;
+    background: var(--card);
+  margin: 15px auto;
+  padding-bottom: 12px;
+  border-radius: 20px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+  max-width: 100%; /* ou 100% se quiser ocupar tudo */
+  width: 100%;
   }
 
   td {
-    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
     position: relative;
-    padding-left: 50%;
-    margin-bottom: 10px;
+  }
+
+  td:last-child {
+    border-bottom: none;
   }
 
   td::before {
-    position: absolute;
-    top: 0;
-    left: 10px;
-    width: 45%;
-    white-space: nowrap;
+    content: attr(data-label);
     font-weight: bold;
+    flex: 1;
+    text-align: left;
+    margin-right: 10px;
   }
 
-  /* Rótulos manuais para mobile */
-  td:nth-child(1)::before { content: "Mês"; }
-  td:nth-child(2)::before { content: "Daniel (€)"; }
-  td:nth-child(3)::before { content: "Camila (€)"; }
-  td:nth-child(4)::before { content: "Total Mês (€)"; }
-  td:nth-child(5)::before { content: "Total Acumulado (€)"; }
-  td:nth-child(6)::before { content: "Estado"; }
+  td > *:not(:first-child) {
+    flex: 1;
+    text-align: right;
+  }
 
   input[type="number"] {
-    width: 100%;
+   
+    padding: 5px 8px;
+    font-size: 1rem;
+    border-radius: 5px;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text);
     box-sizing: border-box;
-    margin-top: 5px;
-  }
-
-  .summary p {
-    font-size: 0.95rem;
-  }
-
-  .progress-bar {
-    height: 16px;
   }
 }
+
