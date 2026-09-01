@@ -10,8 +10,8 @@
  * apenas o código de acesso. Se ficar vazio, o site pede os três valores.
  */
 export const FIREBASE = {
-  projectId: '',
-  apiKey: '',
+  projectId: 'orcamentos-2069e',
+  apiKey: 'AIzaSyBdO7aoRtUzccoItuIv4-XhOcP7izCzgEE',
 }
 
 export const temFirebaseNoCodigo = Boolean(FIREBASE.projectId && FIREBASE.apiKey)
