@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { VERDE, VERMELHO } from '../estado.js'
-import { configCompleta } from '../sync/config.js'
+import { configCompleta, faltaSoOCodigo } from '../sync/config.js'
+import { FIREBASE } from '../firebase.js'
 
 const ETIQUETAS = {
   desligado: { texto: 'Só neste dispositivo', cor: 'var(--texto-fraco)' },
@@ -18,7 +19,8 @@ const REGRAS = `rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /casita/{espaco} {
-      allow read, write: if true;
+      allow get, create, update: if true;
+      allow list, delete: if false;
     }
   }
 }`
@@ -91,37 +93,48 @@ export default function Sincronizacao({ sync, onFechar }) {
       </section>
 
       <section className="cartao">
-        <h2 className="cartao__titulo cartao__titulo--solo">Ligação ao Firebase</h2>
+        <h2 className="cartao__titulo cartao__titulo--solo">
+          {faltaSoOCodigo ? 'Código de acesso' : 'Ligação ao Firebase'}
+        </h2>
 
-        <label className="etiqueta" htmlFor="projectId">
-          Project ID
-        </label>
-        <input
-          id="projectId"
-          className="campo"
-          type="text"
-          autoComplete="off"
-          autoCapitalize="none"
-          spellCheck="false"
-          placeholder="casita-1a2b3"
-          value={form.projectId}
-          onChange={alterar('projectId')}
-        />
+        {faltaSoOCodigo ? (
+          <p className="nota">
+            Ligação já configurada: projeto <b className="impressao">{FIREBASE.projectId}</b>. Só
+            precisas do código de acesso.
+          </p>
+        ) : (
+          <>
+            <label className="etiqueta" htmlFor="projectId">
+              Project ID
+            </label>
+            <input
+              id="projectId"
+              className="campo"
+              type="text"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck="false"
+              placeholder="casita-1a2b3"
+              value={form.projectId}
+              onChange={alterar('projectId')}
+            />
 
-        <label className="etiqueta" htmlFor="apiKey">
-          API key (Web)
-        </label>
-        <input
-          id="apiKey"
-          className="campo"
-          type="text"
-          autoComplete="off"
-          autoCapitalize="none"
-          spellCheck="false"
-          placeholder="AIza…"
-          value={form.apiKey}
-          onChange={alterar('apiKey')}
-        />
+            <label className="etiqueta" htmlFor="apiKey">
+              API key (Web)
+            </label>
+            <input
+              id="apiKey"
+              className="campo"
+              type="text"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck="false"
+              placeholder="AIza…"
+              value={form.apiKey}
+              onChange={alterar('apiKey')}
+            />
+          </>
+        )}
 
         <label className="etiqueta" htmlFor="codigo">
           Código de acesso
@@ -170,6 +183,7 @@ export default function Sincronizacao({ sync, onFechar }) {
         )}
       </section>
 
+      {!faltaSoOCodigo && (
       <section className="cartao">
         <h2 className="cartao__titulo cartao__titulo--solo">Como preencher</h2>
         <ol className="passos">
@@ -194,9 +208,12 @@ export default function Sincronizacao({ sync, onFechar }) {
         <p className="nota">
           Estas regras deixam qualquer pessoa escrever na coleção <code>casita</code>, mas o
           conteúdo vai cifrado com o teu código — quem lá chegar vê texto sem sentido. A API key do
-          Firebase é pública por definição; não é um segredo.
+          Firebase é pública por definição; não é um segredo. <code>get</code> sem{' '}
+          <code>list</code> impede alguém de descobrir os documentos que existem, e{' '}
+          <code>delete</code> fechado impede que os apaguem.
         </p>
       </section>
+      )}
     </>
   )
 }
