@@ -63,6 +63,12 @@ export default function Sincronizacao({ sync, onFechar }) {
             })}
           </p>
         )}
+        {ligado && !erro && (
+          <p className="nota">
+            Cada campo é guardado por si. Se estiverem os dois a mexer ao mesmo tempo em coisas
+            diferentes, fica tudo; no mesmo campo, fica o valor escrito mais tarde.
+          </p>
+        )}
         {ligado && espaco && (
           <p className="nota">
             Espaço <b className="impressao">{espaco}</b> — confirma que aparece este mesmo código
@@ -179,7 +185,9 @@ export default function Sincronizacao({ sync, onFechar }) {
             <b>Project ID</b> e a <b>apiKey</b>.
           </li>
           <li>
-            Em <b>Firestore → Rules</b>, cola as regras abaixo e publica.
+            Em <b>Firestore → Rules</b>, <b>apaga o que lá está</b> e cola as regras abaixo. As
+            regras de origem terminam em <code>if false</code> e bloqueiam tudo — com elas a app
+            não lê nem escreve nada. Carrega em <b>Publish</b>.
           </li>
         </ol>
         <pre className="codigo">{REGRAS}</pre>

@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
-import { ABAS, PARTES_SINCRONIZADAS, carregarEstado, guardarEstado } from './estado.js'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ABAS } from './estado.js'
+import { achatar, estampar, reconstruir } from './sync/registos.js'
+import { carregarLocal, guardarLocal } from './sync/armazenamento.js'
 import { useSync } from './sync/useSync.js'
 import Dashboard from './tabs/Dashboard.jsx'
 import Casa from './tabs/Casa.jsx'
@@ -8,32 +10,36 @@ import Orcamento from './tabs/Orcamento.jsx'
 import Sincronizacao, { estadoDaSync } from './tabs/Sincronizacao.jsx'
 
 export default function App() {
-  const [estado, setEstado] = useState(carregarEstado)
+  const [{ aba, registos }, setLocal] = useState(carregarLocal)
   const [painelSync, setPainelSync] = useState(false)
 
-  // Cache local: arranque instantâneo e continua a funcionar sem rede.
-  useEffect(() => {
-    guardarEstado(estado)
-  }, [estado])
+  const estado = useMemo(() => reconstruir(registos), [registos])
+  const estadoRef = useRef(estado)
+  estadoRef.current = estado
 
-  const aplicarRemoto = useCallback((dados) => {
-    setEstado((anterior) => ({ ...anterior, ...dados }))
+  useEffect(() => {
+    guardarLocal({ aba, registos })
+  }, [aba, registos])
+
+  const aplicarRemoto = useCallback((novos) => {
+    setLocal((anterior) => ({ ...anterior, registos: novos }))
   }, [])
 
-  const sync = useSync({ estado, aplicarRemoto, partes: PARTES_SINCRONIZADAS })
+  const sync = useSync({ registos, aplicarRemoto })
   const etiqueta = estadoDaSync(sync.situacao)
 
-  // Qualquer alteração de dados carimba a hora — é ela que decide quem vence.
-  const definir = (chave, valor) =>
-    setEstado((anterior) => ({
+  /** Carimba só os campos que mudaram — é isso que permite fundir por campo. */
+  const definir = (chave, valor) => {
+    const seguinte = { ...estadoRef.current, [chave]: valor }
+    setLocal((anterior) => ({
       ...anterior,
-      [chave]: valor,
-      ...(chave === 'aba' ? {} : { atualizado: Date.now() }),
+      registos: estampar(anterior.registos, achatar(seguinte), Date.now()),
     }))
+  }
 
-  const abrirAba = (aba) => {
+  const abrirAba = (novaAba) => {
     setPainelSync(false)
-    definir('aba', aba)
+    setLocal((anterior) => ({ ...anterior, aba: novaAba }))
     window.scrollTo({ top: 0 })
   }
 
@@ -58,8 +64,8 @@ export default function App() {
             <button
               key={tab.id}
               type="button"
-              className={`aba ${!painelSync && estado.aba === tab.id ? 'aba--ativa' : ''}`}
-              aria-current={!painelSync && estado.aba === tab.id ? 'page' : undefined}
+              className={`aba ${!painelSync && aba === tab.id ? 'aba--ativa' : ''}`}
+              aria-current={!painelSync && aba === tab.id ? 'page' : undefined}
               onClick={() => abrirAba(tab.id)}
             >
               {tab.nome}
@@ -71,23 +77,21 @@ export default function App() {
       <main className="conteudo">
         {painelSync && <Sincronizacao sync={sync} onFechar={() => setPainelSync(false)} />}
 
-        {!painelSync && estado.aba === 'dashboard' && (
-          <Dashboard estado={estado} onAbrirAba={abrirAba} />
-        )}
-        {!painelSync && estado.aba === 'casa' && (
+        {!painelSync && aba === 'dashboard' && <Dashboard estado={estado} onAbrirAba={abrirAba} />}
+        {!painelSync && aba === 'casa' && (
           <Casa dados={estado.casa} onChange={(casa) => definir('casa', casa)} />
         )}
-        {!painelSync && estado.aba === 'carro' && (
+        {!painelSync && aba === 'carro' && (
           <Carro dados={estado.carro} onChange={(carro) => definir('carro', carro)} />
         )}
-        {!painelSync && estado.aba === 'daniel' && (
+        {!painelSync && aba === 'daniel' && (
           <Orcamento
             nome="Daniel"
             dados={estado.daniel}
             onChange={(daniel) => definir('daniel', daniel)}
           />
         )}
-        {!painelSync && estado.aba === 'camila' && (
+        {!painelSync && aba === 'camila' && (
           <Orcamento
             nome="Camila"
             dados={estado.camila}
@@ -98,7 +102,7 @@ export default function App() {
 
       <footer className="rodape">
         {sync.ligado
-          ? 'Guardado na nuvem e sincronizado entre dispositivos.'
+          ? 'Sincronizado campo a campo entre dispositivos.'
           : 'Guardado só neste dispositivo — liga a sincronização em Local.'}
       </footer>
     </div>

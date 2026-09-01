@@ -32,16 +32,14 @@ function orcamentoVazio() {
 function orcamentoExemplo() {
   return {
     contaCorrente: 0,
-    rendimentos: [{ id: novoId(), descricao: 'Ordenado', valor: 850 }],
+    rendimentos: [{ id: 'r1', descricao: 'Ordenado', valor: 850 }],
     despesas: [
-      { id: novoId(), descricao: 'Poupança casa', valor: 500, categoria: 'Poupança' },
-      { id: novoId(), descricao: 'Poupança carro', valor: 100, categoria: 'Poupança' },
-      { id: novoId(), descricao: 'Alimentação', valor: 150, categoria: 'Essencial' },
+      { id: 'd1', descricao: 'Poupança casa', valor: 500, categoria: 'Poupança' },
+      { id: 'd2', descricao: 'Poupança carro', valor: 100, categoria: 'Poupança' },
+      { id: 'd3', descricao: 'Alimentação', valor: 150, categoria: 'Essencial' },
     ],
   }
 }
-
-export const PARTES_SINCRONIZADAS = ['casa', 'carro', 'daniel', 'camila']
 
 export const ESTADO_INICIAL = {
   versao: 2,
@@ -64,6 +62,11 @@ export const ESTADO_INICIAL = {
   camila: orcamentoVazio(),
 }
 
+const limparId = (id) => {
+  const limpo = String(id ?? '').replace(/\./g, '_')
+  return limpo || novoId()
+}
+
 const num = (v, fallback = 0) => {
   const n = Number(v)
   return Number.isFinite(n) ? n : fallback
@@ -75,14 +78,14 @@ function sanearOrcamento(dados, fallback) {
     contaCorrente: num(dados.contaCorrente),
     rendimentos: Array.isArray(dados.rendimentos)
       ? dados.rendimentos.map((r) => ({
-          id: r?.id || novoId(),
+          id: limparId(r?.id),
           descricao: String(r?.descricao ?? ''),
           valor: num(r?.valor),
         }))
       : fallback.rendimentos,
     despesas: Array.isArray(dados.despesas)
       ? dados.despesas.map((d) => ({
-          id: d?.id || novoId(),
+          id: limparId(d?.id),
           descricao: String(d?.descricao ?? ''),
           valor: num(d?.valor),
           categoria: NOMES_CATEGORIAS.includes(d?.categoria) ? d.categoria : 'Outro',
@@ -130,10 +133,3 @@ export function carregarEstado() {
   return inicial
 }
 
-export function guardarEstado(estado) {
-  try {
-    localStorage.setItem(CHAVE, JSON.stringify(estado))
-  } catch {
-    // localStorage indisponível (modo privado, quota cheia) — segue sem guardar
-  }
-}

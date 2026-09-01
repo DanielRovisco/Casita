@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "build:pages": "vite build && rm -rf ../assets ../index.html && cp -r dist/. .."
+    "build:pages": "vite build && rm -rf ../assets ../index.html && cp -r dist/. ..",
+    "test": "node testes/merge.test.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

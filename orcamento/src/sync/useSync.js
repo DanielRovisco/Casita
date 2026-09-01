@@ -1,16 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cifrar, decifrar, idDoEspaco, temCripto } from './cripto.js'
-import { escreverRemoto, lerRemoto } from './firestore.js'
-import { carregarConfig, configCompleta, guardarConfig, apagarConfig, CONFIG_VAZIA } from './config.js'
+import { ConflitoDeEscrita, escreverRemoto, lerRemoto } from './firestore.js'
+import { fundir } from './registos.js'
+import { jaViuEspaco, marcarEspacoVisto } from './armazenamento.js'
+import {
+  CONFIG_VAZIA,
+  apagarConfig,
+  carregarConfig,
+  configCompleta,
+  guardarConfig,
+} from './config.js'
 
-const ATRASO_ENVIO = 1200 // espera a que pares de escrever antes de enviar
-const INTERVALO_LEITURA = 20000 // procura alterações de outros dispositivos
+const ATRASO_ENVIO = 1200 // agrupa escritas seguidas
+const INTERVALO_LEITURA = 15000 // procura alterações do outro dispositivo
+const TENTATIVAS = 4 // voltas em caso de conflito de escrita
+
+const iguais = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 
 /**
- * Mantém o estado igual em todos os dispositivos que usem o mesmo código.
- * O que vence é sempre a versão com o carimbo `atualizado` mais recente.
+ * Sincroniza os registos campo a campo. Cada volta lê o remoto, funde com
+ * o local (vence o carimbo mais recente por campo) e só escreve se a versão
+ * do documento não tiver mudado entretanto — se mudou, repete com o que há
+ * de novo. Nenhuma escrita apaga a do outro.
  */
-export function useSync({ estado, aplicarRemoto, partes }) {
+export function useSync({ registos, aplicarRemoto, aoSincronizar }) {
   const [config, setConfig] = useState(carregarConfig)
   const [situacao, setSituacao] = useState('desligado')
   const [erro, setErro] = useState('')
@@ -18,100 +31,100 @@ export function useSync({ estado, aplicarRemoto, partes }) {
   const [espaco, setEspaco] = useState('')
   const [espacoNovo, setEspacoNovo] = useState(false)
 
-  const estadoRef = useRef(estado)
-  estadoRef.current = estado
+  const registosRef = useRef(registos)
+  registosRef.current = registos
 
-  const enviadoRef = useRef(0)
+  const emCursoRef = useRef(false)
+  const pendenteRef = useRef(false)
   const temporizadorRef = useRef(null)
+
   const ligado = configCompleta(config) && temCripto()
 
-  const dadosDe = useCallback(
-    (fonte) => Object.fromEntries(partes.map((p) => [p, fonte[p]])),
-    [partes]
-  )
-
-  const puxar = useCallback(
-    async ({ silencioso = false } = {}) => {
-      if (!ligado) return
-      if (!silencioso) setSituacao('a-sincronizar')
-      try {
-        const id = await idDoEspaco(config.codigo)
-        setEspaco(id.slice(1, 7))
-        const remoto = await lerRemoto(config, id)
-        const local = estadoRef.current
-        setEspacoNovo(!remoto)
-
-        if (remoto && remoto.atualizado > (local.atualizado || 0)) {
-          const dados = await decifrar(config.codigo, remoto.conteudo)
-          aplicarRemoto({ ...dadosDe(dados), atualizado: remoto.atualizado })
-          enviadoRef.current = remoto.atualizado
-        } else if (!remoto || remoto.atualizado < (local.atualizado || 0)) {
-          const carimbo = local.atualizado || Date.now()
-          const conteudo = await cifrar(config.codigo, dadosDe(local))
-          await escreverRemoto(config, id, conteudo, carimbo)
-          enviadoRef.current = carimbo
-        } else {
-          enviadoRef.current = remoto.atualizado
-        }
-
-        setErro('')
-        setSituacao('ok')
-        setUltimaSync(Date.now())
-      } catch (e) {
-        setErro(mensagemDeErro(e))
-        setSituacao('erro')
-      }
-    },
-    [config, ligado, aplicarRemoto, dadosDe]
-  )
-
-  const empurrar = useCallback(async () => {
+  const sincronizar = useCallback(async () => {
     if (!ligado) return
-    const local = estadoRef.current
-    const carimbo = local.atualizado || Date.now()
+    if (emCursoRef.current) {
+      pendenteRef.current = true
+      return
+    }
+
+    emCursoRef.current = true
     setSituacao('a-sincronizar')
+
     try {
       const id = await idDoEspaco(config.codigo)
-      const conteudo = await cifrar(config.codigo, dadosDe(local))
-      await escreverRemoto(config, id, conteudo, carimbo)
-      enviadoRef.current = carimbo
+      setEspaco(id.slice(1, 7))
+
+      for (let tentativa = 0; tentativa < TENTATIVAS; tentativa++) {
+        const remoto = await lerRemoto(config, id)
+        setEspacoNovo(!remoto)
+
+        const locais = registosRef.current
+        const remotos = remoto ? await decifrar(config.codigo, remoto.conteudo) : {}
+
+        // Dispositivo novo neste espaço: adota o que lá está em vez de
+        // fundir, senão os valores de arranque apareciam como itens a mais.
+        const primeiraVez = Boolean(remoto) && !jaViuEspaco(id)
+        const juntos = primeiraVez ? remotos : fundir(locais, remotos)
+
+        if (!iguais(juntos, locais)) aplicarRemoto(juntos)
+
+        if (iguais(juntos, remotos)) {
+          marcarEspacoVisto(id)
+          break
+        }
+
+        try {
+          const conteudo = await cifrar(config.codigo, juntos)
+          await escreverRemoto(config, id, conteudo, Date.now(), remoto ? remoto.versao : null)
+          marcarEspacoVisto(id)
+          break
+        } catch (e) {
+          // Outro dispositivo escreveu primeiro: lê outra vez e funde com o novo.
+          if (!(e instanceof ConflitoDeEscrita) || tentativa === TENTATIVAS - 1) throw e
+        }
+      }
+
       setErro('')
       setSituacao('ok')
       setUltimaSync(Date.now())
+      if (aoSincronizar) aoSincronizar()
     } catch (e) {
       setErro(mensagemDeErro(e))
       setSituacao('erro')
+    } finally {
+      emCursoRef.current = false
+      if (pendenteRef.current) {
+        pendenteRef.current = false
+        setTimeout(sincronizar, 150)
+      }
     }
-  }, [config, ligado, dadosDe])
+  }, [config, ligado, aplicarRemoto, aoSincronizar])
 
-  // Primeira ligação e mudanças de configuração.
+  // Ligação inicial e mudanças de configuração.
   useEffect(() => {
     if (!ligado) {
       setSituacao(configCompleta(config) && !temCripto() ? 'sem-cripto' : 'desligado')
       return
     }
-    puxar()
+    sincronizar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ligado, config.projectId, config.apiKey, config.codigo])
 
-  // Envia as alterações locais, agrupadas.
+  // Alterações locais, agrupadas.
   useEffect(() => {
     if (!ligado) return undefined
-    const carimbo = estado.atualizado || 0
-    if (carimbo <= enviadoRef.current) return undefined
-
     clearTimeout(temporizadorRef.current)
-    temporizadorRef.current = setTimeout(empurrar, ATRASO_ENVIO)
+    temporizadorRef.current = setTimeout(sincronizar, ATRASO_ENVIO)
     return () => clearTimeout(temporizadorRef.current)
-  }, [estado.atualizado, ligado, empurrar])
+  }, [registos, ligado, sincronizar])
 
-  // Procura alterações de outros dispositivos.
+  // Alterações do outro dispositivo.
   useEffect(() => {
     if (!ligado) return undefined
 
-    const relogio = setInterval(() => puxar({ silencioso: true }), INTERVALO_LEITURA)
+    const relogio = setInterval(sincronizar, INTERVALO_LEITURA)
     const aoVoltar = () => {
-      if (document.visibilityState === 'visible') puxar({ silencioso: true })
+      if (document.visibilityState === 'visible') sincronizar()
     }
     document.addEventListener('visibilitychange', aoVoltar)
     window.addEventListener('online', aoVoltar)
@@ -121,7 +134,7 @@ export function useSync({ estado, aplicarRemoto, partes }) {
       document.removeEventListener('visibilitychange', aoVoltar)
       window.removeEventListener('online', aoVoltar)
     }
-  }, [ligado, puxar])
+  }, [ligado, sincronizar])
 
   const gravarConfig = useCallback((nova) => {
     const limpa = {
@@ -129,7 +142,6 @@ export function useSync({ estado, aplicarRemoto, partes }) {
       apiKey: nova.apiKey.trim(),
       codigo: nova.codigo.trim(),
     }
-    enviadoRef.current = 0
     guardarConfig(limpa)
     setConfig(limpa)
     setErro('')
@@ -137,7 +149,6 @@ export function useSync({ estado, aplicarRemoto, partes }) {
 
   const desligar = useCallback(() => {
     clearTimeout(temporizadorRef.current)
-    enviadoRef.current = 0
     apagarConfig()
     setConfig(CONFIG_VAZIA)
     setErro('')
@@ -157,7 +168,7 @@ export function useSync({ estado, aplicarRemoto, partes }) {
     ligado,
     espaco,
     espacoNovo,
-    sincronizarAgora: puxar,
+    sincronizarAgora: sincronizar,
   }
 }
 
@@ -171,7 +182,7 @@ function mensagemDeErro(e) {
   }
   if (/API key not valid|API_KEY/i.test(texto)) return 'API key inválida.'
   if (/PERMISSION_DENIED|Missing or insufficient permissions/i.test(texto)) {
-    return 'O Firestore recusou o acesso — falta publicar as regras de segurança.'
+    return 'O Firestore recusou o acesso — falta publicar as regras de segurança (as regras por omissão bloqueiam tudo).'
   }
   if (/NOT_FOUND|does not exist/i.test(texto)) {
     return 'Projeto ou base de dados não encontrada. Confirma o Project ID e cria a base Firestore.'
