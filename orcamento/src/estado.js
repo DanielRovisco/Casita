@@ -41,9 +41,12 @@ function orcamentoExemplo() {
   }
 }
 
+export const PARTES_SINCRONIZADAS = ['casa', 'carro', 'daniel', 'camila']
+
 export const ESTADO_INICIAL = {
   versao: 2,
   aba: 'dashboard',
+  atualizado: 0,
   casa: {
     saldo: 27660.58,
     taxaAnual: 2.4,
@@ -97,6 +100,7 @@ export function carregarEstado() {
       return {
         versao: 2,
         aba: ABAS.some((a) => a.id === d?.aba) ? d.aba : 'dashboard',
+        atualizado: num(d?.atualizado),
         casa: {
           saldo: num(d?.casa?.saldo, inicial.casa.saldo),
           taxaAnual: num(d?.casa?.taxaAnual, inicial.casa.taxaAnual),

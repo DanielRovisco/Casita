@@ -1,19 +1,38 @@
-import { useEffect, useState } from 'react'
-import { ABAS, carregarEstado, guardarEstado } from './estado.js'
+import { useCallback, useEffect, useState } from 'react'
+import { ABAS, PARTES_SINCRONIZADAS, carregarEstado, guardarEstado } from './estado.js'
+import { useSync } from './sync/useSync.js'
 import Dashboard from './tabs/Dashboard.jsx'
 import Casa from './tabs/Casa.jsx'
 import Carro from './tabs/Carro.jsx'
 import Orcamento from './tabs/Orcamento.jsx'
+import Sincronizacao, { estadoDaSync } from './tabs/Sincronizacao.jsx'
 
 export default function App() {
   const [estado, setEstado] = useState(carregarEstado)
+  const [painelSync, setPainelSync] = useState(false)
 
+  // Cache local: arranque instantâneo e continua a funcionar sem rede.
   useEffect(() => {
     guardarEstado(estado)
   }, [estado])
 
-  const definir = (chave, valor) => setEstado((anterior) => ({ ...anterior, [chave]: valor }))
+  const aplicarRemoto = useCallback((dados) => {
+    setEstado((anterior) => ({ ...anterior, ...dados }))
+  }, [])
+
+  const sync = useSync({ estado, aplicarRemoto, partes: PARTES_SINCRONIZADAS })
+  const etiqueta = estadoDaSync(sync.situacao)
+
+  // Qualquer alteração de dados carimba a hora — é ela que decide quem vence.
+  const definir = (chave, valor) =>
+    setEstado((anterior) => ({
+      ...anterior,
+      [chave]: valor,
+      ...(chave === 'aba' ? {} : { atualizado: Date.now() }),
+    }))
+
   const abrirAba = (aba) => {
+    setPainelSync(false)
     definir('aba', aba)
     window.scrollTo({ top: 0 })
   }
@@ -21,14 +40,26 @@ export default function App() {
   return (
     <div className="app">
       <header className="cabecalho">
-        <h1 className="cabecalho__titulo">Casita</h1>
+        <div className="cabecalho__topo">
+          <h1 className="cabecalho__titulo">Casita</h1>
+          <button
+            className="chip-sync"
+            type="button"
+            aria-label={`Sincronização: ${etiqueta.texto}`}
+            onClick={() => setPainelSync((v) => !v)}
+          >
+            <span className="ponto" style={{ background: etiqueta.cor }} />
+            {sync.ligado ? 'Nuvem' : 'Local'}
+          </button>
+        </div>
+
         <nav className="abas" aria-label="Secções">
           {ABAS.map((tab) => (
             <button
               key={tab.id}
               type="button"
-              className={`aba ${estado.aba === tab.id ? 'aba--ativa' : ''}`}
-              aria-current={estado.aba === tab.id ? 'page' : undefined}
+              className={`aba ${!painelSync && estado.aba === tab.id ? 'aba--ativa' : ''}`}
+              aria-current={!painelSync && estado.aba === tab.id ? 'page' : undefined}
               onClick={() => abrirAba(tab.id)}
             >
               {tab.nome}
@@ -38,21 +69,25 @@ export default function App() {
       </header>
 
       <main className="conteudo">
-        {estado.aba === 'dashboard' && <Dashboard estado={estado} onAbrirAba={abrirAba} />}
-        {estado.aba === 'casa' && (
+        {painelSync && <Sincronizacao sync={sync} onFechar={() => setPainelSync(false)} />}
+
+        {!painelSync && estado.aba === 'dashboard' && (
+          <Dashboard estado={estado} onAbrirAba={abrirAba} />
+        )}
+        {!painelSync && estado.aba === 'casa' && (
           <Casa dados={estado.casa} onChange={(casa) => definir('casa', casa)} />
         )}
-        {estado.aba === 'carro' && (
+        {!painelSync && estado.aba === 'carro' && (
           <Carro dados={estado.carro} onChange={(carro) => definir('carro', carro)} />
         )}
-        {estado.aba === 'daniel' && (
+        {!painelSync && estado.aba === 'daniel' && (
           <Orcamento
             nome="Daniel"
             dados={estado.daniel}
             onChange={(daniel) => definir('daniel', daniel)}
           />
         )}
-        {estado.aba === 'camila' && (
+        {!painelSync && estado.aba === 'camila' && (
           <Orcamento
             nome="Camila"
             dados={estado.camila}
@@ -61,7 +96,11 @@ export default function App() {
         )}
       </main>
 
-      <footer className="rodape">Guardado automaticamente neste dispositivo.</footer>
+      <footer className="rodape">
+        {sync.ligado
+          ? 'Guardado na nuvem e sincronizado entre dispositivos.'
+          : 'Guardado só neste dispositivo — liga a sincronização em Local.'}
+      </footer>
     </div>
   )
 }
