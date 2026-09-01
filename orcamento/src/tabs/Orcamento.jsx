@@ -165,11 +165,6 @@ export default function Orcamento({ nome, dados, onChange }) {
 
       <section className="cartao">
         <p className="cartao__etiqueta">Estimativa fim do mês</p>
-        <div className="valor-grande" style={{ color: totais.estimativa < 0 ? VERMELHO : VERDE }}>
-          {formatarEuro(totais.estimativa)}
-        </div>
-
-        <hr className="separador" />
 
         <LinhaCalculada label="Conta corrente" valor={formatarEuro(dados.contaCorrente)} />
         <LinhaCalculada
@@ -181,11 +176,10 @@ export default function Orcamento({ nome, dados, onChange }) {
 
         <hr className="separador" />
 
-        <LinhaCalculada
-          label="Sobra no mês"
-          valor={formatarEuro(totais.sobra)}
-          cor={totais.sobra < 0 ? VERMELHO : VERDE}
-        />
+        <div className="valor-grande" style={{ color: totais.estimativa < 0 ? VERMELHO : VERDE }}>
+          {formatarEuro(totais.estimativa)}
+        </div>
+
         <div className="linha-dados">
           <span className="linha-dados__label">Taxa de poupança</span>
           <span

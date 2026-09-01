@@ -1,10 +1,44 @@
 import { NOMES_CATEGORIAS } from './estado.js'
 
-export const juroDiario = (casa) => (casa.saldo * (casa.taxaAnual / 100)) / 365
-export const juroMensal = (casa) => (casa.saldo * (casa.taxaAnual / 100)) / 12
-export const juroAnual = (casa) => casa.saldo * (casa.taxaAnual / 100)
+const DIA_MS = 86400000
 
-export const patrimonioTotal = (estado) => estado.casa.saldo + estado.carro.valor
+const inicioDoDia = (instante) => {
+  const d = new Date(instante)
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
+
+/**
+ * Fator de um dia a partir do APY. O banco capitaliza todos os dias, por
+ * isso a taxa diária é a raiz 365 do ano, não o ano a dividir por 365.
+ */
+export const fatorDiario = (taxaAnual) => Math.pow(1 + taxaAnual / 100, 1 / 365)
+
+/** Dias inteiros passados desde o saldo ter sido registado. */
+export function diasDesde(desde, agora = Date.now()) {
+  if (!desde) return 0
+  // Arredonda: com a mudança da hora há dias de 23 e de 25 horas.
+  return Math.max(0, Math.round((inicioDoDia(agora) - inicioDoDia(desde)) / DIA_MS))
+}
+
+/** Saldo de hoje: o último saldo registado, mais os juros de cada dia desde então. */
+export function saldoCasa(casa, agora = Date.now()) {
+  const dias = diasDesde(casa.saldoDesde, agora)
+  return casa.saldo * Math.pow(fatorDiario(casa.taxaAnual), dias)
+}
+
+export const jurosAcumulados = (casa, agora = Date.now()) => saldoCasa(casa, agora) - casa.saldo
+
+export const juroDiario = (casa, agora = Date.now()) =>
+  saldoCasa(casa, agora) * (fatorDiario(casa.taxaAnual) - 1)
+
+export const juroMensal = (casa, agora = Date.now()) =>
+  saldoCasa(casa, agora) * (Math.pow(fatorDiario(casa.taxaAnual), 30) - 1)
+
+export const juroAnual = (casa, agora = Date.now()) => saldoCasa(casa, agora) * (casa.taxaAnual / 100)
+
+export const patrimonioTotal = (estado, agora = Date.now()) =>
+  saldoCasa(estado.casa, agora) + estado.carro.valor
 
 export function progresso(valor, objetivo) {
   if (!objetivo || objetivo <= 0) return null

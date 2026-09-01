@@ -1,19 +1,22 @@
 import { COR_CARRO, COR_CASA, VERDE, VERMELHO } from '../estado.js'
 import { formatarEuro, formatarPercentagem } from '../format.js'
-import { juroMensal, patrimonioTotal, progresso } from '../calculos.js'
+import { juroMensal, patrimonioTotal, progresso, saldoCasa } from '../calculos.js'
+import { useAgora } from '../useAgora.js'
 import { Barra, LinhaCalculada } from '../componentes.jsx'
 
 export default function Dashboard({ estado, onAbrirAba }) {
+  const agora = useAgora()
   const { casa, carro } = estado
-  const total = patrimonioTotal(estado)
-  const parteCasa = total > 0 ? (casa.saldo / total) * 100 : 0
+  const saldo = saldoCasa(casa, agora)
+  const total = patrimonioTotal(estado, agora)
+  const parteCasa = total > 0 ? (saldo / total) * 100 : 0
   const parteCarro = total > 0 ? (carro.valor / total) * 100 : 0
 
-  const juroCasaMes = juroMensal(casa)
+  const juroCasaMes = juroMensal(casa, agora)
   const mediaCarroMes = carro.ganho3Meses / 3
   const rendimentoMes = juroCasaMes + mediaCarroMes
 
-  const pctCasa = progresso(casa.saldo, casa.objetivo)
+  const pctCasa = progresso(saldo, casa.objetivo)
   const pctCarro = progresso(carro.valor, carro.objetivo)
 
   return (
@@ -58,7 +61,6 @@ export default function Dashboard({ estado, onAbrirAba }) {
         <hr className="separador" />
         <LinhaCalculada
           label="Juros da casa"
-          nota="estimado"
           valor={formatarEuro(juroCasaMes)}
           cor={VERDE}
         />
@@ -77,7 +79,7 @@ export default function Dashboard({ estado, onAbrirAba }) {
             Casa
           </h2>
           <span className="cartao__total" style={{ color: COR_CASA }}>
-            {formatarEuro(casa.saldo)}
+            {formatarEuro(saldo)}
           </span>
         </div>
         {pctCasa !== null && (

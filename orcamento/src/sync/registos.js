@@ -9,6 +9,7 @@ import { ESTADO_INICIAL, NOMES_CATEGORIAS } from '../estado.js'
 
 export const CAMPOS_SIMPLES = [
   'casa.saldo',
+  'casa.saldoDesde',
   'casa.taxaAnual',
   'casa.ganhoMes',
   'casa.ganhoTotal',

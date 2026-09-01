@@ -47,6 +47,7 @@ export const ESTADO_INICIAL = {
   atualizado: 0,
   casa: {
     saldo: 27660.58,
+    saldoDesde: 0,
     taxaAnual: 2.4,
     ganhoMes: 54.53,
     ganhoTotal: 475.21,
@@ -106,6 +107,7 @@ export function carregarEstado() {
         atualizado: num(d?.atualizado),
         casa: {
           saldo: num(d?.casa?.saldo, inicial.casa.saldo),
+          saldoDesde: num(d?.casa?.saldoDesde, inicial.casa.saldoDesde),
           taxaAnual: num(d?.casa?.taxaAnual, inicial.casa.taxaAnual),
           ganhoMes: num(d?.casa?.ganhoMes, inicial.casa.ganhoMes),
           ganhoTotal: num(d?.casa?.ganhoTotal, inicial.casa.ganhoTotal),
