@@ -1,14 +1,17 @@
 import { COR_CARRO, VERDE, VERMELHO } from '../estado.js'
 import { formatarEuro, formatarNumero, formatarPercentagem } from '../format.js'
-import { progresso } from '../calculos.js'
+import { carroFimDoMes, diasAteFimDoMes, progresso } from '../calculos.js'
+import { useAgora } from '../useAgora.js'
 import { Barra, LinhaCalculada, LinhaEditavel, ValorEditavel } from '../componentes.jsx'
 
 export default function Carro({ dados, onChange }) {
+  const agora = useAgora()
   const atualizar = (alteracoes) => onChange({ ...dados, ...alteracoes })
   const pct = progresso(dados.valor, dados.objetivo)
   const falta = dados.objetivo - dados.valor
   const corGanho = dados.ganho3Meses < 0 ? VERMELHO : VERDE
   const fator = 1 + dados.retorno / 100
+  const diasQueFaltam = diasAteFimDoMes(agora)
 
   return (
     <>
@@ -23,6 +26,19 @@ export default function Carro({ dados, onChange }) {
           />
         </div>
         <p className="nota">Valor atual da carteira — toca no valor para atualizar.</p>
+
+        <hr className="separador" />
+
+        <LinhaCalculada
+          label="Estimativa fim do mês"
+          nota={diasQueFaltam === 1 ? 'falta 1 dia' : `faltam ${diasQueFaltam} dias`}
+          valor={formatarEuro(carroFimDoMes(dados, agora))}
+          cor={COR_CARRO}
+        />
+        <p className="nota">
+          Projeção pela média dos últimos 3 meses, aplicada ao que falta do mês. Ao contrário dos
+          juros da casa, isto não é garantido — o valor pode subir ou descer.
+        </p>
 
         {pct !== null && (
           <>

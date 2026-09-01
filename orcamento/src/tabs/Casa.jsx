@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { COR_CASA, VERDE, VERMELHO } from '../estado.js'
 import { formatarEuro, formatarNumero, formatarPercentagem } from '../format.js'
 import {
+  casaFimDoMes,
+  diasAteFimDoMes,
   diasDesde,
   juroAnual,
   juroDiario,
@@ -29,6 +31,7 @@ export default function Casa({ dados, onChange }) {
   const saldo = saldoCasa(dados, agora)
   const juros = jurosAcumulados(dados, agora)
   const dias = diasDesde(dados.saldoDesde, agora)
+  const diasQueFaltam = diasAteFimDoMes(agora)
   const pct = progresso(saldo, dados.objetivo)
   const falta = dados.objetivo - saldo
 
@@ -64,6 +67,15 @@ export default function Casa({ dados, onChange }) {
             />
           </>
         )}
+
+        <hr className="separador" />
+
+        <LinhaCalculada
+          label="Estimativa fim do mês"
+          nota={diasQueFaltam === 1 ? 'falta 1 dia' : `faltam ${diasQueFaltam} dias`}
+          valor={formatarEuro(casaFimDoMes(dados, agora))}
+          cor={COR_CASA}
+        />
 
         <hr className="separador" />
 

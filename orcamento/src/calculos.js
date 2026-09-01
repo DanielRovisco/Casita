@@ -37,6 +37,26 @@ export const juroMensal = (casa, agora = Date.now()) =>
 
 export const juroAnual = (casa, agora = Date.now()) => saldoCasa(casa, agora) * (casa.taxaAnual / 100)
 
+/** Dias inteiros que faltam até ao último dia deste mês. */
+export function diasAteFimDoMes(agora = Date.now()) {
+  const d = new Date(agora)
+  const ultimo = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+  return Math.max(0, Math.round((inicioDoDia(ultimo) - inicioDoDia(agora)) / DIA_MS))
+}
+
+export function diasDoMes(agora = Date.now()) {
+  const d = new Date(agora)
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+}
+
+/** Casa no fim do mês: juros certos, é só deixar correr os dias que faltam. */
+export const casaFimDoMes = (casa, agora = Date.now()) =>
+  saldoCasa(casa, agora) * Math.pow(fatorDiario(casa.taxaAnual), diasAteFimDoMes(agora))
+
+/** Carro no fim do mês: a média dos últimos meses, na parte do mês que falta. */
+export const carroFimDoMes = (carro, agora = Date.now()) =>
+  carro.valor + (carro.ganho3Meses / 3) * (diasAteFimDoMes(agora) / diasDoMes(agora))
+
 export const patrimonioTotal = (estado, agora = Date.now()) =>
   saldoCasa(estado.casa, agora) + estado.carro.valor
 

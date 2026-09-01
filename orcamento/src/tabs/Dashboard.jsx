@@ -1,6 +1,12 @@
 import { COR_CARRO, COR_CASA, VERDE, VERMELHO } from '../estado.js'
 import { formatarEuro, formatarPercentagem } from '../format.js'
-import { juroMensal, patrimonioTotal, progresso, saldoCasa } from '../calculos.js'
+import {
+  carroFimDoMes,
+  casaFimDoMes,
+  patrimonioTotal,
+  progresso,
+  saldoCasa,
+} from '../calculos.js'
 import { useAgora } from '../useAgora.js'
 import { Barra, LinhaCalculada } from '../componentes.jsx'
 
@@ -11,10 +17,6 @@ export default function Dashboard({ estado, onAbrirAba }) {
   const total = patrimonioTotal(estado, agora)
   const parteCasa = total > 0 ? (saldo / total) * 100 : 0
   const parteCarro = total > 0 ? (carro.valor / total) * 100 : 0
-
-  const juroCasaMes = juroMensal(casa, agora)
-  const mediaCarroMes = carro.ganho3Meses / 3
-  const rendimentoMes = juroCasaMes + mediaCarroMes
 
   const pctCasa = progresso(saldo, casa.objetivo)
   const pctCarro = progresso(carro.valor, carro.objetivo)
@@ -50,28 +52,6 @@ export default function Dashboard({ estado, onAbrirAba }) {
         </div>
       </section>
 
-      <section className="cartao">
-        <p className="cartao__etiqueta">Rendimento estimado / mês</p>
-        <div
-          className="valor-grande valor-grande--medio"
-          style={{ color: rendimentoMes < 0 ? VERMELHO : VERDE }}
-        >
-          {formatarEuro(rendimentoMes)}
-        </div>
-        <hr className="separador" />
-        <LinhaCalculada
-          label="Juros da casa"
-          valor={formatarEuro(juroCasaMes)}
-          cor={VERDE}
-        />
-        <LinhaCalculada
-          label="Carro"
-          nota="média de 3 meses"
-          valor={formatarEuro(mediaCarroMes)}
-          cor={mediaCarroMes < 0 ? VERMELHO : VERDE}
-        />
-      </section>
-
       <button className="cartao cartao--botao" type="button" onClick={() => onAbrirAba('casa')}>
         <div className="cartao__topo">
           <h2 className="cartao__titulo">
@@ -91,6 +71,11 @@ export default function Dashboard({ estado, onAbrirAba }) {
             />
           </>
         )}
+        <LinhaCalculada
+          label="Estimativa fim do mês"
+          valor={formatarEuro(casaFimDoMes(casa, agora))}
+          cor={COR_CASA}
+        />
         <LinhaCalculada
           label="Ganho no último mês"
           valor={formatarEuro(casa.ganhoMes)}
@@ -122,6 +107,11 @@ export default function Dashboard({ estado, onAbrirAba }) {
             />
           </>
         )}
+        <LinhaCalculada
+          label="Estimativa fim do mês"
+          valor={formatarEuro(carroFimDoMes(carro, agora))}
+          cor={COR_CARRO}
+        />
         <LinhaCalculada
           label="Rendibilidade"
           valor={formatarPercentagem(carro.retorno, 1)}
