@@ -261,10 +261,10 @@ body {
 
 .linha:last-of-type { border-bottom: none; }
 
-.linha--rendimento { grid-template-columns: 1fr 116px 40px; }
+.linha--rendimento { grid-template-columns: 22px 1fr 108px 40px; }
 
 .linha--despesa {
-  grid-template-columns: 6px 1fr 108px 40px;
+  grid-template-columns: 22px 1fr 104px 40px;
   grid-template-areas:
     "cor descricao descricao remover"
     "cor categoria valor    valor";
@@ -423,7 +423,7 @@ body {
   .valor-grande--medio { font-size: 30px; }
   .valor-grande .campo--valor { font-size: 34px; }
   .linha--despesa {
-    grid-template-columns: 6px 1fr 140px 130px 40px;
+    grid-template-columns: 22px 1fr 140px 130px 40px;
     grid-template-areas: none;
   }
   .linha--despesa > * { grid-area: auto !important; }
@@ -562,4 +562,111 @@ body {
   border-radius: 10px;
   color: #FCD34D;
   font-size: 13px;
+}
+
+/* ---------- confirmação, categorias e resumo ---------- */
+
+.check {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.nota--topo {
+  margin: -6px 0 12px;
+}
+
+.linha--categoria {
+  grid-template-columns: 30px 1fr 40px;
+}
+
+.cor-atual {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--borda-forte);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.paleta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0 12px 30px;
+}
+
+.paleta__cor {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.paleta__cor--ativa {
+  border-color: var(--texto);
+}
+
+.resumo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.donut {
+  width: 108px;
+  height: 108px;
+  flex: 0 0 auto;
+}
+
+.donut__vazio {
+  fill: none;
+  stroke: var(--elevado);
+}
+
+.resumo__lista {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.resumo__linha {
+  display: grid;
+  grid-template-columns: 9px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 14px;
+}
+
+.resumo__nome {
+  color: var(--texto-suave);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resumo__valor {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.resumo__fatia {
+  min-width: 34px;
+  text-align: right;
+  color: var(--texto-fraco);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 400px) {
+  .resumo { gap: 12px; }
+  .donut { width: 92px; height: 92px; }
+  .resumo__linha { font-size: 13px; gap: 6px; }
 }

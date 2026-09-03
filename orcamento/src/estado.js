@@ -3,14 +3,36 @@ import { novoId } from './format.js'
 export const CHAVE = 'casita-v2'
 export const CHAVE_ANTIGA = 'orcamento-mensal-v1'
 
-export const CATEGORIAS = {
-  Poupança: '#3B82F6',
-  Essencial: '#10B981',
-  Lazer: '#F59E0B',
-  Outro: '#6B7280',
+export const CATEGORIAS_INICIAIS = [
+  { id: 'poupanca', nome: 'Poupança', cor: '#3B82F6' },
+  { id: 'essencial', nome: 'Essencial', cor: '#10B981' },
+  { id: 'lazer', nome: 'Lazer', cor: '#F59E0B' },
+  { id: 'outro', nome: 'Outro', cor: '#6B7280' },
+]
+
+/** Antes a despesa guardava o nome da categoria em vez do id. */
+export const LEGADO_CATEGORIAS = {
+  'Poupança': 'poupanca',
+  Essencial: 'essencial',
+  Lazer: 'lazer',
+  Outro: 'outro',
 }
 
-export const NOMES_CATEGORIAS = Object.keys(CATEGORIAS)
+/**
+ * Cores para categorias novas: a paleta categórica validada para fundo
+ * escuro (ΔE adjacente >= 8 em daltonismo), mais o cinzento do "Outro".
+ */
+export const CORES_CATEGORIA = [
+  '#3987e5',
+  '#d95926',
+  '#199e70',
+  '#c98500',
+  '#d55181',
+  '#9085e9',
+  '#e66767',
+  '#008300',
+  '#6B7280',
+]
 
 export const COR_CASA = '#3B82F6'
 export const COR_CARRO = '#06B6D4'
@@ -32,17 +54,18 @@ function orcamentoVazio() {
 function orcamentoExemplo() {
   return {
     contaCorrente: 0,
-    rendimentos: [{ id: 'r1', descricao: 'Ordenado', valor: 850 }],
+    rendimentos: [{ id: 'r1', descricao: 'Ordenado', valor: 850, confirmado: false }],
     despesas: [
-      { id: 'd1', descricao: 'Poupança casa', valor: 500, categoria: 'Poupança' },
-      { id: 'd2', descricao: 'Poupança carro', valor: 100, categoria: 'Poupança' },
-      { id: 'd3', descricao: 'Alimentação', valor: 150, categoria: 'Essencial' },
+      { id: 'd1', descricao: 'Poupança casa', valor: 500, categoria: 'poupanca', confirmado: false },
+      { id: 'd2', descricao: 'Poupança carro', valor: 100, categoria: 'poupanca', confirmado: false },
+      { id: 'd3', descricao: 'Alimentação', valor: 150, categoria: 'essencial', confirmado: false },
     ],
   }
 }
 
 export const ESTADO_INICIAL = {
   versao: 2,
+  categorias: CATEGORIAS_INICIAIS,
   aba: 'dashboard',
   atualizado: 0,
   casa: {
@@ -82,6 +105,7 @@ function sanearOrcamento(dados, fallback) {
           id: limparId(r?.id),
           descricao: String(r?.descricao ?? ''),
           valor: num(r?.valor),
+          confirmado: Boolean(r?.confirmado),
         }))
       : fallback.rendimentos,
     despesas: Array.isArray(dados.despesas)
@@ -89,7 +113,8 @@ function sanearOrcamento(dados, fallback) {
           id: limparId(d?.id),
           descricao: String(d?.descricao ?? ''),
           valor: num(d?.valor),
-          categoria: NOMES_CATEGORIAS.includes(d?.categoria) ? d.categoria : 'Outro',
+          categoria: String(d?.categoria ?? 'outro'),
+          confirmado: Boolean(d?.confirmado),
         }))
       : fallback.despesas,
   }

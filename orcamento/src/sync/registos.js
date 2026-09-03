@@ -5,7 +5,7 @@
  * duas pessoas a mexer ao mesmo tempo em coisas diferentes não se pisam.
  */
 
-import { ESTADO_INICIAL, NOMES_CATEGORIAS } from '../estado.js'
+import { CATEGORIAS_INICIAIS, ESTADO_INICIAL, LEGADO_CATEGORIAS } from '../estado.js'
 
 export const CAMPOS_SIMPLES = [
   'casa.saldo',
@@ -25,11 +25,44 @@ export const CAMPOS_SIMPLES = [
 export const PESSOAS = ['daniel', 'camila']
 export const LISTAS = ['rendimentos', 'despesas']
 
+const CAMPOS_RENDIMENTO = { descricao: 'texto', valor: 'numero', confirmado: 'bool' }
+const CAMPOS_DESPESA = {
+  descricao: 'texto',
+  valor: 'numero',
+  categoria: 'texto',
+  confirmado: 'bool',
+}
+const CAMPOS_CATEGORIA = { nome: 'texto', cor: 'texto' }
+
+/** Cada coleção é uma lista de itens com id próprio. */
+export const COLECOES = [
+  ...PESSOAS.flatMap((pessoa) => [
+    { prefixo: `${pessoa}.rendimentos`, destino: [pessoa, 'rendimentos'], campos: CAMPOS_RENDIMENTO },
+    { prefixo: `${pessoa}.despesas`, destino: [pessoa, 'despesas'], campos: CAMPOS_DESPESA },
+  ]),
+  { prefixo: 'categorias', destino: ['categorias'], campos: CAMPOS_CATEGORIA },
+]
+
 const EXISTE = '@existe'
 const ORDEM = '@ordem'
 
 const clonar = (v) => JSON.parse(JSON.stringify(v))
 const iguais = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+
+const emCaminho = (estado, destino) =>
+  destino.length === 1 ? estado[destino[0]] : estado[destino[0]][destino[1]]
+
+function converter(valor, tipo, omissao) {
+  if (valor === undefined || valor === null) return omissao
+  if (tipo === 'numero') {
+    const n = Number(valor)
+    return Number.isFinite(n) ? n : 0
+  }
+  if (tipo === 'bool') return Boolean(valor)
+  return String(valor)
+}
+
+const OMISSAO = { numero: 0, texto: '', bool: false }
 
 /** Estado da interface -> mapa plano de valores. */
 export function achatar(estado) {
@@ -40,17 +73,15 @@ export function achatar(estado) {
     valores[campo] = estado[grupo][chave]
   }
 
-  for (const pessoa of PESSOAS) {
-    for (const lista of LISTAS) {
-      estado[pessoa][lista].forEach((item, indice) => {
-        const base = `${pessoa}.${lista}.${item.id}`
-        valores[`${base}.${EXISTE}`] = true
-        valores[`${base}.${ORDEM}`] = indice
-        valores[`${base}.descricao`] = item.descricao
-        valores[`${base}.valor`] = item.valor
-        if (lista === 'despesas') valores[`${base}.categoria`] = item.categoria
-      })
-    }
+  for (const colecao of COLECOES) {
+    emCaminho(estado, colecao.destino).forEach((item, indice) => {
+      const base = `${colecao.prefixo}.${item.id}`
+      valores[`${base}.${EXISTE}`] = true
+      valores[`${base}.${ORDEM}`] = indice
+      for (const campo of Object.keys(colecao.campos)) {
+        valores[`${base}.${campo}`] = item[campo]
+      }
+    })
   }
 
   return valores
@@ -103,6 +134,7 @@ export function reconstruir(registos) {
   const estado = {
     casa: clonar(ESTADO_INICIAL.casa),
     carro: clonar(ESTADO_INICIAL.carro),
+    categorias: [],
     daniel: { contaCorrente: 0, rendimentos: [], despesas: [] },
     camila: { contaCorrente: 0, rendimentos: [], despesas: [] },
   }
@@ -115,36 +147,46 @@ export function reconstruir(registos) {
     estado[grupo][chave] = Number.isFinite(valor) ? valor : 0
   }
 
-  const itens = new Map()
+  const porColecao = new Map(COLECOES.map((c) => [c.prefixo, new Map()]))
+
   for (const [chave, registo] of Object.entries(registos)) {
-    const partes = chave.split('.')
-    if (partes.length !== 4) continue
-    const [pessoa, lista, id, campo] = partes
-    if (!PESSOAS.includes(pessoa) || !LISTAS.includes(lista)) continue
+    const colecao = COLECOES.find((c) => chave.startsWith(`${c.prefixo}.`))
+    if (!colecao) continue
+    const resto = chave.slice(colecao.prefixo.length + 1).split('.')
+    if (resto.length !== 2) continue
+    const [id, campo] = resto
 
-    const caminho = `${pessoa}.${lista}.${id}`
-    if (!itens.has(caminho)) itens.set(caminho, { pessoa, lista, id, campos: {} })
-    itens.get(caminho).campos[campo] = registo.v
+    const itens = porColecao.get(colecao.prefixo)
+    if (!itens.has(id)) itens.set(id, {})
+    itens.get(id)[campo] = registo.v
   }
 
-  for (const { pessoa, lista, id, campos } of itens.values()) {
-    if (campos[EXISTE] !== true) continue
-    const item = {
-      id,
-      descricao: String(campos.descricao ?? ''),
-      valor: Number(campos.valor) || 0,
-      ordem: Number(campos[ORDEM]) || 0,
+  for (const colecao of COLECOES) {
+    const lista = []
+    for (const [id, campos] of porColecao.get(colecao.prefixo)) {
+      if (campos[EXISTE] !== true) continue
+      const item = { id, ordem: Number(campos[ORDEM]) || 0 }
+      for (const [campo, tipo] of Object.entries(colecao.campos)) {
+        item[campo] = converter(campos[campo], tipo, OMISSAO[tipo])
+      }
+      lista.push(item)
     }
-    if (lista === 'despesas') {
-      item.categoria = NOMES_CATEGORIAS.includes(campos.categoria) ? campos.categoria : 'Outro'
-    }
-    estado[pessoa][lista].push(item)
+    lista.sort((a, b) => a.ordem - b.ordem || a.id.localeCompare(b.id))
+
+    const semOrdem = lista.map(({ ordem, ...item }) => item)
+    if (colecao.destino.length === 1) estado[colecao.destino[0]] = semOrdem
+    else estado[colecao.destino[0]][colecao.destino[1]] = semOrdem
   }
 
+  if (estado.categorias.length === 0) estado.categorias = clonar(CATEGORIAS_INICIAIS)
+
+  // Versões anteriores guardavam o nome da categoria dentro da despesa.
+  const ids = new Set(estado.categorias.map((c) => c.id))
+  const reserva = estado.categorias[estado.categorias.length - 1].id
   for (const pessoa of PESSOAS) {
-    for (const lista of LISTAS) {
-      estado[pessoa][lista].sort((a, b) => a.ordem - b.ordem || a.id.localeCompare(b.id))
-      estado[pessoa][lista] = estado[pessoa][lista].map(({ ordem, ...item }) => item)
+    for (const despesa of estado[pessoa].despesas) {
+      if (ids.has(despesa.categoria)) continue
+      despesa.categoria = LEGADO_CATEGORIAS[despesa.categoria] || reserva
     }
   }
 

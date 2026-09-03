@@ -29,12 +29,33 @@ export default function App() {
   const etiqueta = estadoDaSync(sync.situacao)
 
   /** Carimba só os campos que mudaram — é isso que permite fundir por campo. */
-  const definir = (chave, valor) => {
-    const seguinte = { ...estadoRef.current, [chave]: valor }
+  const definirVarios = (alteracoes) => {
+    const seguinte = { ...estadoRef.current, ...alteracoes }
     setLocal((anterior) => ({
       ...anterior,
       registos: estampar(anterior.registos, achatar(seguinte), Date.now()),
     }))
+  }
+
+  const definir = (chave, valor) => definirVarios({ [chave]: valor })
+
+  /** Apagar uma categoria não pode deixar despesas órfãs. */
+  const removerCategoria = (id) => {
+    const atual = estadoRef.current
+    const restantes = atual.categorias.filter((c) => c.id !== id)
+    if (restantes.length === 0) return
+
+    const reserva = restantes[restantes.length - 1].id
+    const remapear = (pessoa) => ({
+      ...pessoa,
+      despesas: pessoa.despesas.map((d) => (d.categoria === id ? { ...d, categoria: reserva } : d)),
+    })
+
+    definirVarios({
+      categorias: restantes,
+      daniel: remapear(atual.daniel),
+      camila: remapear(atual.camila),
+    })
   }
 
   const abrirAba = (novaAba) => {
@@ -88,14 +109,20 @@ export default function App() {
           <Orcamento
             nome="Daniel"
             dados={estado.daniel}
+            categorias={estado.categorias}
             onChange={(daniel) => definir('daniel', daniel)}
+            onChangeCategorias={(categorias) => definir('categorias', categorias)}
+            onRemoverCategoria={removerCategoria}
           />
         )}
         {!painelSync && aba === 'camila' && (
           <Orcamento
             nome="Camila"
             dados={estado.camila}
+            categorias={estado.categorias}
             onChange={(camila) => definir('camila', camila)}
+            onChangeCategorias={(categorias) => definir('categorias', categorias)}
+            onRemoverCategoria={removerCategoria}
           />
         )}
       </main>

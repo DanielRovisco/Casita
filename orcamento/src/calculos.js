@@ -1,5 +1,3 @@
-import { NOMES_CATEGORIAS } from './estado.js'
-
 const DIA_MS = 86400000
 
 const inicioDoDia = (instante) => {
@@ -65,23 +63,39 @@ export function progresso(valor, objetivo) {
   return (valor / objetivo) * 100
 }
 
-export function totaisOrcamento(orcamento) {
-  const rendimentos = orcamento.rendimentos.reduce((s, r) => s + (Number(r.valor) || 0), 0)
-  const despesas = orcamento.despesas.reduce((s, d) => s + (Number(d.valor) || 0), 0)
+const soma = (itens, filtro = () => true) =>
+  itens.reduce((total, i) => total + (filtro(i) ? Number(i.valor) || 0 : 0), 0)
 
-  const porCategoria = Object.fromEntries(NOMES_CATEGORIAS.map((n) => [n, 0]))
-  for (const d of orcamento.despesas) {
-    const cat = NOMES_CATEGORIAS.includes(d.categoria) ? d.categoria : 'Outro'
-    porCategoria[cat] += Number(d.valor) || 0
-  }
+const confirmado = (i) => Boolean(i.confirmado)
+
+export function totaisOrcamento(orcamento, categorias = []) {
+  const rendimentos = soma(orcamento.rendimentos)
+  const despesas = soma(orcamento.despesas)
+  const rendimentosRecebidos = soma(orcamento.rendimentos, confirmado)
+  const despesasPagas = soma(orcamento.despesas, confirmado)
+
+  const porCategoria = categorias.map((categoria) => {
+    const daCategoria = orcamento.despesas.filter((d) => d.categoria === categoria.id)
+    return {
+      ...categoria,
+      total: soma(daCategoria),
+      pago: soma(daCategoria, confirmado),
+      quantidade: daCategoria.length,
+      fatia: despesas > 0 ? (soma(daCategoria) / despesas) * 100 : 0,
+    }
+  })
 
   const sobra = rendimentos - despesas
   return {
     rendimentos,
     despesas,
+    rendimentosRecebidos,
+    despesasPagas,
     porCategoria,
     sobra,
     estimativa: orcamento.contaCorrente + sobra,
+    // O que já aconteceu de facto: conta corrente + recebido − pago.
+    realAteAgora: orcamento.contaCorrente + rendimentosRecebidos - despesasPagas,
     taxaPoupanca: rendimentos > 0 ? (sobra / rendimentos) * 100 : 0,
   }
 }

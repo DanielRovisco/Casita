@@ -1,11 +1,23 @@
-import { useMemo } from 'react'
-import { CATEGORIAS, NOMES_CATEGORIAS, VERDE, VERMELHO } from '../estado.js'
+import { useMemo, useState } from 'react'
+import { CORES_CATEGORIA, VERDE, VERMELHO } from '../estado.js'
 import { formatarEuro, formatarPercentagem, novoId } from '../format.js'
 import { totaisOrcamento } from '../calculos.js'
 import { Barra, LinhaCalculada, ValorEditavel, ValorInput } from '../componentes.jsx'
+import Donut from '../Donut.jsx'
 
-export default function Orcamento({ nome, dados, onChange }) {
-  const totais = useMemo(() => totaisOrcamento(dados), [dados])
+export default function Orcamento({
+  nome,
+  dados,
+  categorias,
+  onChange,
+  onChangeCategorias,
+  onRemoverCategoria,
+}) {
+  const totais = useMemo(() => totaisOrcamento(dados, categorias), [dados, categorias])
+  const [gerirCategorias, setGerirCategorias] = useState(false)
+  const [paletaAberta, setPaletaAberta] = useState(null)
+
+  const corDe = (id) => categorias.find((c) => c.id === id)?.cor || '#6B7280'
 
   const atualizar = (alteracoes) => onChange({ ...dados, ...alteracoes })
 
@@ -16,6 +28,8 @@ export default function Orcamento({ nome, dados, onChange }) {
 
   const removerItem = (lista, id) =>
     atualizar({ [lista]: dados[lista].filter((item) => item.id !== id) })
+
+  const comDespesas = totais.porCategoria.filter((c) => c.total > 0)
 
   return (
     <>
@@ -42,11 +56,23 @@ export default function Orcamento({ nome, dados, onChange }) {
             {formatarEuro(totais.rendimentos)}
           </span>
         </div>
+        <p className="nota nota--topo">
+          Recebido {formatarEuro(totais.rendimentosRecebidos)} de{' '}
+          {formatarEuro(totais.rendimentos)}
+        </p>
 
         {dados.rendimentos.length === 0 && <p className="vazio">Sem rendimentos registados.</p>}
 
         {dados.rendimentos.map((item) => (
           <div className="linha linha--rendimento" key={item.id}>
+            <input
+              className="check"
+              type="checkbox"
+              style={{ accentColor: VERDE }}
+              checked={item.confirmado}
+              aria-label={`Marcar ${item.descricao || 'rendimento'} como recebido`}
+              onChange={(e) => atualizarItem('rendimentos', item.id, { confirmado: e.target.checked })}
+            />
             <input
               className="campo"
               type="text"
@@ -76,7 +102,10 @@ export default function Orcamento({ nome, dados, onChange }) {
           type="button"
           onClick={() =>
             atualizar({
-              rendimentos: [...dados.rendimentos, { id: novoId(), descricao: '', valor: 0 }],
+              rendimentos: [
+                ...dados.rendimentos,
+                { id: novoId(), descricao: '', valor: 0, confirmado: false },
+              ],
             })
           }
         >
@@ -91,14 +120,21 @@ export default function Orcamento({ nome, dados, onChange }) {
             {formatarEuro(totais.despesas)}
           </span>
         </div>
+        <p className="nota nota--topo">
+          Gasto {formatarEuro(totais.despesasPagas)} de {formatarEuro(totais.despesas)}
+        </p>
 
         {dados.despesas.length === 0 && <p className="vazio">Sem despesas registadas.</p>}
 
         {dados.despesas.map((item) => (
           <div className="linha linha--despesa" key={item.id}>
-            <span
-              className="linha__cor"
-              style={{ background: CATEGORIAS[item.categoria] || CATEGORIAS.Outro }}
+            <input
+              className="check"
+              type="checkbox"
+              style={{ accentColor: corDe(item.categoria) }}
+              checked={item.confirmado}
+              aria-label={`Marcar ${item.descricao || 'despesa'} como paga`}
+              onChange={(e) => atualizarItem('despesas', item.id, { confirmado: e.target.checked })}
             />
             <input
               className="campo campo--descricao"
@@ -112,12 +148,12 @@ export default function Orcamento({ nome, dados, onChange }) {
               className="campo campo--seletor"
               aria-label="Categoria da despesa"
               value={item.categoria}
-              style={{ color: CATEGORIAS[item.categoria] || CATEGORIAS.Outro }}
+              style={{ color: corDe(item.categoria) }}
               onChange={(e) => atualizarItem('despesas', item.id, { categoria: e.target.value })}
             >
-              {NOMES_CATEGORIAS.map((cat) => (
-                <option key={cat} value={cat} style={{ color: '#F9FAFB' }}>
-                  {cat}
+              {categorias.map((cat) => (
+                <option key={cat.id} value={cat.id} style={{ color: '#F9FAFB' }}>
+                  {cat.nome}
                 </option>
               ))}
             </select>
@@ -144,23 +180,120 @@ export default function Orcamento({ nome, dados, onChange }) {
             atualizar({
               despesas: [
                 ...dados.despesas,
-                { id: novoId(), descricao: '', valor: 0, categoria: 'Outro' },
+                {
+                  id: novoId(),
+                  descricao: '',
+                  valor: 0,
+                  categoria: categorias[categorias.length - 1]?.id || 'outro',
+                  confirmado: false,
+                },
               ],
             })
           }
         >
           + Adicionar despesa
         </button>
+      </section>
 
-        <div className="categorias">
-          {NOMES_CATEGORIAS.map((cat) => (
-            <span className="categoria" key={cat}>
-              <span className="categoria__ponto" style={{ background: CATEGORIAS[cat] }} />
-              {cat}
-              <span className="categoria__valor">{formatarEuro(totais.porCategoria[cat])}</span>
-            </span>
-          ))}
+      <section className="cartao">
+        <div className="cartao__topo">
+          <h2 className="cartao__titulo">Categorias</h2>
+          <button
+            className="btn-texto"
+            type="button"
+            onClick={() => setGerirCategorias((v) => !v)}
+          >
+            {gerirCategorias ? 'Fechar' : 'Gerir'}
+          </button>
         </div>
+
+        {!gerirCategorias ? (
+          <div className="categorias">
+            {categorias.map((cat) => (
+              <span className="categoria" key={cat.id}>
+                <span className="categoria__ponto" style={{ background: cat.cor }} />
+                {cat.nome}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <>
+            {categorias.map((cat) => (
+              <div key={cat.id}>
+                <div className="linha linha--categoria">
+                  <button
+                    className="cor-atual"
+                    type="button"
+                    style={{ background: cat.cor }}
+                    aria-label={`Mudar a cor de ${cat.nome}`}
+                    onClick={() => setPaletaAberta(paletaAberta === cat.id ? null : cat.id)}
+                  />
+                  <input
+                    className="campo"
+                    type="text"
+                    aria-label="Nome da categoria"
+                    placeholder="Nome"
+                    value={cat.nome}
+                    onChange={(e) =>
+                      onChangeCategorias(
+                        categorias.map((c) => (c.id === cat.id ? { ...c, nome: e.target.value } : c))
+                      )
+                    }
+                  />
+                  <button
+                    className="btn-remover"
+                    type="button"
+                    disabled={categorias.length <= 1}
+                    aria-label={`Remover categoria ${cat.nome}`}
+                    onClick={() => onRemoverCategoria(cat.id)}
+                  >
+                    ×
+                  </button>
+                </div>
+                {paletaAberta === cat.id && (
+                  <div className="paleta">
+                    {CORES_CATEGORIA.map((cor) => (
+                      <button
+                        key={cor}
+                        type="button"
+                        className={`paleta__cor ${cat.cor === cor ? 'paleta__cor--ativa' : ''}`}
+                        style={{ background: cor }}
+                        aria-label={`Cor ${cor}`}
+                        onClick={() => {
+                          onChangeCategorias(
+                            categorias.map((c) => (c.id === cat.id ? { ...c, cor } : c))
+                          )
+                          setPaletaAberta(null)
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            <button
+              className="btn-adicionar"
+              type="button"
+              onClick={() =>
+                onChangeCategorias([
+                  ...categorias,
+                  {
+                    id: novoId(),
+                    nome: '',
+                    cor: CORES_CATEGORIA[categorias.length % CORES_CATEGORIA.length],
+                  },
+                ])
+              }
+            >
+              + Nova categoria
+            </button>
+            <p className="nota">
+              As categorias são as mesmas para ti e para a Camila. Ao apagar uma, as despesas dela
+              passam para a última da lista.
+            </p>
+          </>
+        )}
       </section>
 
       <section className="cartao">
@@ -196,6 +329,61 @@ export default function Orcamento({ nome, dados, onChange }) {
         <p className="nota">
           Percentagem dos rendimentos que sobra no fim do mês depois das despesas.
         </p>
+      </section>
+
+      <section className="cartao">
+        <div className="cartao__topo">
+          <h2 className="cartao__titulo">Resumo por categoria</h2>
+          <span className="cartao__total" style={{ color: VERMELHO }}>
+            {formatarEuro(totais.despesas)}
+          </span>
+        </div>
+
+        {comDespesas.length === 0 ? (
+          <p className="vazio">Ainda não há despesas com valor para resumir.</p>
+        ) : (
+          <>
+            <div className="resumo">
+              <Donut itens={comDespesas} titulo={`Despesas de ${nome} por categoria`} />
+              <ul className="resumo__lista">
+                {comDespesas
+                  .slice()
+                  .sort((a, b) => b.total - a.total)
+                  .map((cat) => (
+                    <li className="resumo__linha" key={cat.id}>
+                      <span className="categoria__ponto" style={{ background: cat.cor }} />
+                      <span className="resumo__nome">{cat.nome}</span>
+                      <span className="resumo__valor">{formatarEuro(cat.total)}</span>
+                      <span className="resumo__fatia">{formatarPercentagem(cat.fatia, 0)}</span>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+
+            <hr className="separador" />
+
+            <LinhaCalculada
+              label="Já pago"
+              nota={`de ${formatarEuro(totais.despesas)}`}
+              valor={formatarEuro(totais.despesasPagas)}
+              cor={VERMELHO}
+            />
+            <LinhaCalculada
+              label="Já recebido"
+              nota={`de ${formatarEuro(totais.rendimentos)}`}
+              valor={formatarEuro(totais.rendimentosRecebidos)}
+              cor={VERDE}
+            />
+            <LinhaCalculada
+              label="Saldo real até agora"
+              valor={formatarEuro(totais.realAteAgora)}
+              cor={totais.realAteAgora < 0 ? VERMELHO : VERDE}
+            />
+            <p className="nota">
+              Conta só o que está confirmado com o visto — o resto ainda é previsão.
+            </p>
+          </>
+        )}
       </section>
     </>
   )
