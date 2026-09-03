@@ -54,11 +54,13 @@ function orcamentoVazio() {
 function orcamentoExemplo() {
   return {
     contaCorrente: 0,
-    rendimentos: [{ id: 'r1', descricao: 'Ordenado', valor: 850, confirmado: false }],
+    rendimentos: [
+      { id: 'r1', descricao: 'Ordenado', valor: 850, confirmado: false, recorrente: true },
+    ],
     despesas: [
-      { id: 'd1', descricao: 'Poupança casa', valor: 500, categoria: 'poupanca', confirmado: false },
-      { id: 'd2', descricao: 'Poupança carro', valor: 100, categoria: 'poupanca', confirmado: false },
-      { id: 'd3', descricao: 'Alimentação', valor: 150, categoria: 'essencial', confirmado: false },
+      { id: 'd1', descricao: 'Poupança casa', valor: 500, categoria: 'poupanca', confirmado: false, recorrente: true },
+      { id: 'd2', descricao: 'Poupança carro', valor: 100, categoria: 'poupanca', confirmado: false, recorrente: true },
+      { id: 'd3', descricao: 'Alimentação', valor: 150, categoria: 'essencial', confirmado: false, recorrente: true },
     ],
   }
 }
@@ -68,6 +70,8 @@ export const ESTADO_INICIAL = {
   categorias: CATEGORIAS_INICIAIS,
   aba: 'dashboard',
   atualizado: 0,
+  // Mês a que o orçamento diz respeito, como AAAAMM. 0 = ainda por definir.
+  mes: { atual: 0 },
   casa: {
     saldo: 27660.58,
     saldoDesde: 0,
@@ -106,6 +110,7 @@ function sanearOrcamento(dados, fallback) {
           descricao: String(r?.descricao ?? ''),
           valor: num(r?.valor),
           confirmado: Boolean(r?.confirmado),
+          recorrente: Boolean(r?.recorrente),
         }))
       : fallback.rendimentos,
     despesas: Array.isArray(dados.despesas)
@@ -115,6 +120,7 @@ function sanearOrcamento(dados, fallback) {
           valor: num(d?.valor),
           categoria: String(d?.categoria ?? 'outro'),
           confirmado: Boolean(d?.confirmado),
+          recorrente: Boolean(d?.recorrente),
         }))
       : fallback.despesas,
   }
@@ -130,6 +136,7 @@ export function carregarEstado() {
         versao: 2,
         aba: ABAS.some((a) => a.id === d?.aba) ? d.aba : 'dashboard',
         atualizado: num(d?.atualizado),
+        mes: { atual: num(d?.mes?.atual) },
         casa: {
           saldo: num(d?.casa?.saldo, inicial.casa.saldo),
           saldoDesde: num(d?.casa?.saldoDesde, inicial.casa.saldoDesde),

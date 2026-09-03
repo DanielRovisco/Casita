@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ABAS } from './estado.js'
+import { mesDe } from './calculos.js'
+import { useAgora } from './useAgora.js'
 import { achatar, estampar, reconstruir } from './sync/registos.js'
 import { carregarLocal, guardarLocal } from './sync/armazenamento.js'
 import { useSync } from './sync/useSync.js'
@@ -12,6 +14,7 @@ import Sincronizacao, { estadoDaSync } from './tabs/Sincronizacao.jsx'
 export default function App() {
   const [{ aba, registos }, setLocal] = useState(carregarLocal)
   const [painelSync, setPainelSync] = useState(false)
+  const agora = useAgora()
 
   const estado = useMemo(() => reconstruir(registos), [registos])
   const estadoRef = useRef(estado)
@@ -64,6 +67,39 @@ export default function App() {
     window.scrollTo({ top: 0 })
   }
 
+  /**
+   * Virar o mês: as recorrentes ficam com os vistos limpos, as pontuais
+   * saem. É determinístico, por isso dois dispositivos a virar o mesmo mês
+   * chegam ao mesmo resultado e a fusão não tem nada que decidir.
+   */
+  useEffect(() => {
+    const mes = mesDe(agora)
+    const guardado = estadoRef.current.mes.atual
+
+    if (!guardado) {
+      definir('mes', { atual: mes })
+      return
+    }
+    if (mes <= guardado) return
+
+    const limpar = (pessoa) => ({
+      ...pessoa,
+      rendimentos: pessoa.rendimentos
+        .filter((r) => r.recorrente)
+        .map((r) => ({ ...r, confirmado: false })),
+      despesas: pessoa.despesas
+        .filter((d) => d.recorrente)
+        .map((d) => ({ ...d, confirmado: false })),
+    })
+
+    definirVarios({
+      mes: { atual: mes },
+      daniel: limpar(estadoRef.current.daniel),
+      camila: limpar(estadoRef.current.camila),
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agora, estado.mes.atual])
+
   return (
     <div className="app">
       <header className="cabecalho">
@@ -110,6 +146,7 @@ export default function App() {
             nome="Daniel"
             dados={estado.daniel}
             categorias={estado.categorias}
+            mes={agora}
             onChange={(daniel) => definir('daniel', daniel)}
             onChangeCategorias={(categorias) => definir('categorias', categorias)}
             onRemoverCategoria={removerCategoria}
@@ -120,6 +157,7 @@ export default function App() {
             nome="Camila"
             dados={estado.camila}
             categorias={estado.categorias}
+            mes={agora}
             onChange={(camila) => definir('camila', camila)}
             onChangeCategorias={(categorias) => definir('categorias', categorias)}
             onRemoverCategoria={removerCategoria}

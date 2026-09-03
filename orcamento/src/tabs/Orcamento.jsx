@@ -1,14 +1,31 @@
 import { useMemo, useState } from 'react'
 import { CORES_CATEGORIA, VERDE, VERMELHO } from '../estado.js'
 import { formatarEuro, formatarPercentagem, novoId } from '../format.js'
-import { totaisOrcamento } from '../calculos.js'
+import { nomeDoMes, totaisOrcamento } from '../calculos.js'
 import { Barra, LinhaCalculada, ValorEditavel, ValorInput } from '../componentes.jsx'
 import Donut from '../Donut.jsx'
+
+/** Botão de "repete todos os meses". */
+function BotaoRecorrente({ ativo, onClick, descricao }) {
+  return (
+    <button
+      className={`btn-repetir ${ativo ? 'btn-repetir--ativo' : ''}`}
+      type="button"
+      aria-pressed={ativo}
+      title={ativo ? 'Repete todos os meses' : 'Só este mês'}
+      aria-label={`${descricao || 'Item'}: ${ativo ? 'repete todos os meses' : 'só este mês'}`}
+      onClick={onClick}
+    >
+      ↻
+    </button>
+  )
+}
 
 export default function Orcamento({
   nome,
   dados,
   categorias,
+  mes,
   onChange,
   onChangeCategorias,
   onRemoverCategoria,
@@ -46,7 +63,10 @@ export default function Orcamento({
             ariaLabel={`Conta corrente de ${nome}`}
           />
         </div>
-        <p className="nota">Ponto de partida do mês — toca no valor para editar.</p>
+        <p className="nota">
+          Ponto de partida de {nomeDoMes(mes)} — toca no valor para editar. No dia 1 as pontuais
+          são apagadas e os vistos limpos; as marcadas com ↻ ficam.
+        </p>
       </section>
 
       <section className="cartao">
@@ -58,7 +78,7 @@ export default function Orcamento({
         </div>
         <p className="nota nota--topo">
           Recebido {formatarEuro(totais.rendimentosRecebidos)} de{' '}
-          {formatarEuro(totais.rendimentos)}
+          {formatarEuro(totais.rendimentos)} · fixo {formatarEuro(totais.rendimentosFixos)}
         </p>
 
         {dados.rendimentos.length === 0 && <p className="vazio">Sem rendimentos registados.</p>}
@@ -86,6 +106,13 @@ export default function Orcamento({
               ariaLabel="Valor do rendimento"
               onChange={(valor) => atualizarItem('rendimentos', item.id, { valor })}
             />
+            <BotaoRecorrente
+              ativo={item.recorrente}
+              descricao={item.descricao}
+              onClick={() =>
+                atualizarItem('rendimentos', item.id, { recorrente: !item.recorrente })
+              }
+            />
             <button
               className="btn-remover"
               type="button"
@@ -104,7 +131,7 @@ export default function Orcamento({
             atualizar({
               rendimentos: [
                 ...dados.rendimentos,
-                { id: novoId(), descricao: '', valor: 0, confirmado: false },
+                { id: novoId(), descricao: '', valor: 0, confirmado: false, recorrente: false },
               ],
             })
           }
@@ -121,7 +148,8 @@ export default function Orcamento({
           </span>
         </div>
         <p className="nota nota--topo">
-          Gasto {formatarEuro(totais.despesasPagas)} de {formatarEuro(totais.despesas)}
+          Gasto {formatarEuro(totais.despesasPagas)} de {formatarEuro(totais.despesas)} · fixo{' '}
+          {formatarEuro(totais.despesasFixas)}
         </p>
 
         {dados.despesas.length === 0 && <p className="vazio">Sem despesas registadas.</p>}
@@ -162,6 +190,11 @@ export default function Orcamento({
               ariaLabel="Valor da despesa"
               onChange={(valor) => atualizarItem('despesas', item.id, { valor })}
             />
+            <BotaoRecorrente
+              ativo={item.recorrente}
+              descricao={item.descricao}
+              onClick={() => atualizarItem('despesas', item.id, { recorrente: !item.recorrente })}
+            />
             <button
               className="btn-remover"
               type="button"
@@ -186,6 +219,7 @@ export default function Orcamento({
                   valor: 0,
                   categoria: categorias[categorias.length - 1]?.id || 'outro',
                   confirmado: false,
+                  recorrente: false,
                 },
               ],
             })
@@ -378,6 +412,11 @@ export default function Orcamento({
               label="Saldo real até agora"
               valor={formatarEuro(totais.realAteAgora)}
               cor={totais.realAteAgora < 0 ? VERMELHO : VERDE}
+            />
+            <LinhaCalculada
+              label="Fixo por mês"
+              nota="marcado com ↻"
+              valor={formatarEuro(totais.despesasFixas)}
             />
             <p className="nota">
               Conta só o que está confirmado com o visto — o resto ainda é previsão.

@@ -261,13 +261,16 @@ body {
 
 .linha:last-of-type { border-bottom: none; }
 
-.linha--rendimento { grid-template-columns: 22px 1fr 108px 40px; }
+.linha--rendimento {
+  grid-template-columns: 22px 1fr 86px 34px 34px;
+  gap: 6px;
+}
 
 .linha--despesa {
-  grid-template-columns: 22px 1fr 104px 40px;
+  grid-template-columns: 22px 1fr 96px 34px;
   grid-template-areas:
     "cor descricao descricao remover"
-    "cor categoria valor    valor";
+    "cor categoria valor     repetir";
   row-gap: 8px;
 }
 
@@ -275,7 +278,8 @@ body {
 .linha--despesa > :nth-child(2) { grid-area: descricao; }
 .linha--despesa > :nth-child(3) { grid-area: categoria; }
 .linha--despesa > :nth-child(4) { grid-area: valor; }
-.linha--despesa > :nth-child(5) { grid-area: remover; }
+.linha--despesa > :nth-child(5) { grid-area: repetir; }
+.linha--despesa > :nth-child(6) { grid-area: remover; }
 
 .linha__cor {
   width: 6px;
@@ -423,9 +427,11 @@ body {
   .valor-grande--medio { font-size: 30px; }
   .valor-grande .campo--valor { font-size: 34px; }
   .linha--despesa {
-    grid-template-columns: 22px 1fr 140px 130px 40px;
     grid-template-areas: none;
   }
+  .linha--rendimento { grid-template-columns: 22px 1fr 120px 34px 40px; gap: 8px; }
+  .linha--despesa { grid-template-columns: 22px 1fr 136px 120px 34px 40px; }
+  .linha--despesa > * { grid-area: auto !important; }
   .linha--despesa > * { grid-area: auto !important; }
 }
 
@@ -669,4 +675,23 @@ body {
   .resumo { gap: 12px; }
   .donut { width: 92px; height: 92px; }
   .resumo__linha { font-size: 13px; gap: 6px; }
+}
+
+.btn-repetir {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  color: var(--texto-fraco);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.btn-repetir--ativo {
+  background: rgba(59, 130, 246, 0.14);
+  border-color: #3B82F6;
+  color: #93B4FC;
 }

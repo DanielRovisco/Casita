@@ -67,6 +67,16 @@ const soma = (itens, filtro = () => true) =>
   itens.reduce((total, i) => total + (filtro(i) ? Number(i.valor) || 0 : 0), 0)
 
 const confirmado = (i) => Boolean(i.confirmado)
+const recorrente = (i) => Boolean(i.recorrente)
+
+/** Mês a que uma data pertence, como AAAAMM — comparável com < e >. */
+export function mesDe(instante = Date.now()) {
+  const d = new Date(instante)
+  return d.getFullYear() * 100 + (d.getMonth() + 1)
+}
+
+export const nomeDoMes = (instante = Date.now()) =>
+  new Date(instante).toLocaleDateString('pt-PT', { month: 'long' })
 
 export function totaisOrcamento(orcamento, categorias = []) {
   const rendimentos = soma(orcamento.rendimentos)
@@ -89,6 +99,8 @@ export function totaisOrcamento(orcamento, categorias = []) {
   return {
     rendimentos,
     despesas,
+    despesasFixas: soma(orcamento.despesas, recorrente),
+    rendimentosFixos: soma(orcamento.rendimentos, recorrente),
     rendimentosRecebidos,
     despesasPagas,
     porCategoria,

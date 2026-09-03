@@ -18,6 +18,7 @@ export const CAMPOS_SIMPLES = [
   'carro.retorno',
   'carro.ganho3Meses',
   'carro.objetivo',
+  'mes.atual',
   'daniel.contaCorrente',
   'camila.contaCorrente',
 ]
@@ -25,12 +26,18 @@ export const CAMPOS_SIMPLES = [
 export const PESSOAS = ['daniel', 'camila']
 export const LISTAS = ['rendimentos', 'despesas']
 
-const CAMPOS_RENDIMENTO = { descricao: 'texto', valor: 'numero', confirmado: 'bool' }
+const CAMPOS_RENDIMENTO = {
+  descricao: 'texto',
+  valor: 'numero',
+  confirmado: 'bool',
+  recorrente: 'bool',
+}
 const CAMPOS_DESPESA = {
   descricao: 'texto',
   valor: 'numero',
   categoria: 'texto',
   confirmado: 'bool',
+  recorrente: 'bool',
 }
 const CAMPOS_CATEGORIA = { nome: 'texto', cor: 'texto' }
 
@@ -134,6 +141,7 @@ export function reconstruir(registos) {
   const estado = {
     casa: clonar(ESTADO_INICIAL.casa),
     carro: clonar(ESTADO_INICIAL.carro),
+    mes: clonar(ESTADO_INICIAL.mes),
     categorias: [],
     daniel: { contaCorrente: 0, rendimentos: [], despesas: [] },
     camila: { contaCorrente: 0, rendimentos: [], despesas: [] },
