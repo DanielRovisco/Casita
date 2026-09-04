@@ -42,6 +42,38 @@ export default function App() {
 
   const definir = (chave, valor) => definirVarios({ [chave]: valor })
 
+  /**
+   * Criar a categoria e atribuí-la à despesa tem de ser UMA alteração: em
+   * duas, a segunda partia do estado anterior e marcava a categoria acabada
+   * de criar como inexistente.
+   */
+  const criarCategoriaPara = (quemChave) => (categoria, despesaId) => {
+    const atual = estadoRef.current
+    definirVarios({
+      categorias: [...atual.categorias, categoria],
+      [quemChave]: {
+        ...atual[quemChave],
+        despesas: atual[quemChave].despesas.map((d) =>
+          d.id === despesaId ? { ...d, categoria: categoria.id } : d
+        ),
+      },
+    })
+  }
+
+  /** Desistir de a nomear: a categoria sai e a despesa volta ao que tinha. */
+  const desfazerCategoriaPara = (quemChave) => (categoriaId, despesaId, anterior) => {
+    const atual = estadoRef.current
+    definirVarios({
+      categorias: atual.categorias.filter((c) => c.id !== categoriaId),
+      [quemChave]: {
+        ...atual[quemChave],
+        despesas: atual[quemChave].despesas.map((d) =>
+          d.id === despesaId ? { ...d, categoria: anterior } : d
+        ),
+      },
+    })
+  }
+
   /** Apagar uma categoria não pode deixar despesas órfãs. */
   const removerCategoria = (id) => {
     const atual = estadoRef.current
@@ -149,6 +181,8 @@ export default function App() {
             mes={agora}
             onChange={(daniel) => definir('daniel', daniel)}
             onChangeCategorias={(categorias) => definir('categorias', categorias)}
+            onCriarCategoria={criarCategoriaPara('daniel')}
+            onDesfazerCategoria={desfazerCategoriaPara('daniel')}
             onRemoverCategoria={removerCategoria}
           />
         )}
@@ -160,6 +194,8 @@ export default function App() {
             mes={agora}
             onChange={(camila) => definir('camila', camila)}
             onChangeCategorias={(categorias) => definir('categorias', categorias)}
+            onCriarCategoria={criarCategoriaPara('camila')}
+            onDesfazerCategoria={desfazerCategoriaPara('camila')}
             onRemoverCategoria={removerCategoria}
           />
         )}

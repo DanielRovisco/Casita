@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CORES_CATEGORIA, VERDE, VERMELHO } from '../estado.js'
 import { formatarEuro, formatarPercentagem, novoId } from '../format.js'
 import { nomeDoMes, totaisOrcamento } from '../calculos.js'
 import { Barra, LinhaCalculada, ValorEditavel, ValorInput } from '../componentes.jsx'
 import Donut from '../Donut.jsx'
+
+const NOVA = '@nova'
 
 /** Botão de "repete todos os meses". */
 function BotaoRecorrente({ ativo, onClick, descricao }) {
@@ -28,11 +30,31 @@ export default function Orcamento({
   mes,
   onChange,
   onChangeCategorias,
+  onCriarCategoria,
+  onDesfazerCategoria,
   onRemoverCategoria,
 }) {
   const totais = useMemo(() => totaisOrcamento(dados, categorias), [dados, categorias])
   const [gerirCategorias, setGerirCategorias] = useState(false)
   const [paletaAberta, setPaletaAberta] = useState(null)
+  const [aNomear, setANomear] = useState(null)
+  const campoNome = useRef(null)
+
+  useEffect(() => {
+    if (aNomear && campoNome.current) campoNome.current.focus()
+  }, [aNomear])
+
+  const proximaCor = () => CORES_CATEGORIA[categorias.length % CORES_CATEGORIA.length]
+
+  const terminarNome = () => {
+    if (!aNomear) return
+    const criada = categorias.find((c) => c.id === aNomear.catId)
+    // Sem nome não fica: desfaz-se e a despesa volta à categoria de antes.
+    if (!criada || !criada.nome.trim()) {
+      onDesfazerCategoria(aNomear.catId, aNomear.despesaId, aNomear.anterior)
+    }
+    setANomear(null)
+  }
 
   const corDe = (id) => categorias.find((c) => c.id === id)?.cor || '#6B7280'
 
@@ -172,19 +194,60 @@ export default function Orcamento({
               value={item.descricao}
               onChange={(e) => atualizarItem('despesas', item.id, { descricao: e.target.value })}
             />
-            <select
-              className="campo campo--seletor"
-              aria-label="Categoria da despesa"
-              value={item.categoria}
-              style={{ color: corDe(item.categoria) }}
-              onChange={(e) => atualizarItem('despesas', item.id, { categoria: e.target.value })}
-            >
-              {categorias.map((cat) => (
-                <option key={cat.id} value={cat.id} style={{ color: '#F9FAFB' }}>
-                  {cat.nome}
+            {aNomear?.despesaId === item.id ? (
+              <input
+                ref={campoNome}
+                className="campo campo--seletor"
+                type="text"
+                aria-label="Nome da categoria nova"
+                placeholder="Nome da categoria"
+                value={categorias.find((c) => c.id === aNomear.catId)?.nome ?? ''}
+                onChange={(e) =>
+                  onChangeCategorias(
+                    categorias.map((c) =>
+                      c.id === aNomear.catId ? { ...c, nome: e.target.value } : c
+                    )
+                  )
+                }
+                onBlur={terminarNome}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') terminarNome()
+                  if (e.key === 'Escape') {
+                    onDesfazerCategoria(aNomear.catId, aNomear.despesaId, aNomear.anterior)
+                    setANomear(null)
+                  }
+                }}
+              />
+            ) : (
+              <select
+                className="campo campo--seletor"
+                aria-label="Categoria da despesa"
+                value={item.categoria}
+                style={{ color: corDe(item.categoria) }}
+                onChange={(e) => {
+                  if (e.target.value !== NOVA) {
+                    atualizarItem('despesas', item.id, { categoria: e.target.value })
+                    return
+                  }
+                  const categoria = { id: novoId(), nome: '', cor: proximaCor() }
+                  onCriarCategoria(categoria, item.id)
+                  setANomear({
+                    despesaId: item.id,
+                    catId: categoria.id,
+                    anterior: item.categoria,
+                  })
+                }}
+              >
+                {categorias.map((cat) => (
+                  <option key={cat.id} value={cat.id} style={{ color: '#F9FAFB' }}>
+                    {cat.nome}
+                  </option>
+                ))}
+                <option value={NOVA} style={{ color: '#F9FAFB' }}>
+                  + Nova categoria…
                 </option>
-              ))}
-            </select>
+              </select>
+            )}
             <ValorInput
               valor={item.valor}
               ariaLabel="Valor da despesa"
